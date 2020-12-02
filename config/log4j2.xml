@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+
+    <Properties>
+        <Property name="log-path">log</Property>
+        <Property name="archive">${log-path}/archive</Property>
+        <Property name="log-filename">repl-store-api.log</Property>
+        <Property name="LOG_PATN">[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout>
+                <pattern>
+                    %clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{ - }{faint}%clr{[%15.15t]}{faint} %clr{%c{10}}{yellow} %clr{:}{faint} %m%n%wEx
+                </pattern>>
+            </PatternLayout>
+        </Console>
+        <RollingFile name="RollingFile-Appender"
+                     fileName="${log-path}/${log-filename}"
+                     filePattern="${archive}/${log-filename}.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{10} - %msg%n"/>
+            <Policies>
+                     <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                   <Delete basePath="${archive}" maxDepth="7">
+                            <IfFileName glob="repl-store-api.log.*.gz"/>
+                            <IfLastModified age="7d"/>
+                   </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.repl.store.api" level="debug" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="debug"/>
+            <AppenderRef ref="Console-Appender" level="debug"/>
+        </Logger>
+
+        <Logger name="org.hibernate" level="error" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+            <AppenderRef ref="Console-Appender" level="info"/>
+        </Logger>
+        <Logger name="org.flywaydb.core" level="warn" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+            <AppenderRef ref="Console-Appender" level="info"/>
+        </Logger>
+        <Logger name="org.springframework" level="debug" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+            <AppenderRef ref="Console-Appender" level="info"/>
+        </Logger>
+        <Logger name="org.apache" level="info" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+            <AppenderRef ref="Console-Appender" level="info"/>
+        </Logger>
+        <Logger name="org.springframework.boot" level="info" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+            <AppenderRef ref="Console-Appender" level="debug"/>
+        </Logger>
+        <Logger name="com.zaxxer.hikari.pool.HikariPool" level="info" additivity="false">
+            <AppenderRef ref="RollingFile-Appender" level="info"/>
+            <AppenderRef ref="Console-Appender" level="info"/>
+        </Logger>
+
+        <Root level="debug">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender" level="warn"/>
+        </Root>
+    </Loggers>
+</Configuration>

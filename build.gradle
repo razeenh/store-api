@@ -1,0 +1,181 @@
+buildscript {
+    ext {
+        springBootVersion = '2.4.0'
+    }
+    repositories {
+        jcenter()
+        mavenCentral()
+        mavenLocal()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+plugins {
+    id 'org.unbroken-dome.test-sets' version '3.0.1'    //Plugin to allow specifying of test sets so as to differentiate between them
+	id 'org.springframework.boot' version "${springBootVersion}"
+	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+	id 'java'
+	id 'jacoco'
+}
+
+group = 'com.repl'
+version = '1.0.0-RELEASE'
+
+ant.propertyfile(file: "version.properties") {
+    entry(key: "version", value: version)
+}
+
+sourceCompatibility = '8'
+targetCompatibility = '8'
+
+repositories {
+    jcenter()
+    mavenCentral()
+    mavenLocal()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+    }
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+    }
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir 'src/integration-test/java'
+        }
+        resources {
+            srcDir 'src/integration-test/resources'
+            srcDir 'src/main/resources'
+        }
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+
+    all*.exclude module: 'spring-boot-starter-logging'//Included by default, so need to exclude in order to use log4j
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+    all {
+        resolutionStrategy {
+            cacheDynamicVersionsFor 0, 'seconds'
+            cacheChangingModulesFor 0, 'seconds'
+        }
+    }
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+	compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.h2database:h2'
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	annotationProcessor 'org.projectlombok:lombok'
+
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    integrationTestImplementation 'io.rest-assured:rest-assured:4.2.0'
+    integrationTestImplementation 'io.rest-assured:json-path:4.2.0'
+    integrationTestImplementation 'io.rest-assured:xml-path:4.2.0'
+
+    testCompile(
+            'org.junit.jupiter:junit-jupiter-engine:5.7.0',
+            'org.junit.platform:junit-platform-launcher:1.7.0',
+            'org.junit.platform:junit-platform-runner:1.7.0'
+    )
+
+    testCompile group: 'org.mockito', name: 'mockito-junit-jupiter', version: '3.6.28'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.6.28'
+
+    implementation "io.springfox:springfox-boot-starter:3.0.0"
+}
+
+///////// TEST /////////
+
+test {
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter', 'junit-vintage'
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+
+    systemProperty 'spring.profiles.active', 'test'
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+}
+
+tasks.withType(Test) {
+    reports.html.destination(file("${buildDir}/reports/${name}"))
+    forkEvery = 100
+}
+
+task integrationTest(type: Test) {
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter', 'junit-vintage'
+    }
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+    }
+
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    classpath += sourceSets.main.runtimeClasspath
+    systemProperty 'spring.profiles.active', 'test'
+
+    outputs.upToDateWhen { false }
+}
+
+check.dependsOn integrationTest
+integrationTest.mustRunAfter test
+
+///////// QUALITY /////////
+
+jacoco {
+    toolVersion = "0.8.5"
+    reportsDir = file("$buildDir/reports/jacoco")
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination file("${buildDir}/reports/jacoco/html")
+    }
+    executionData(test, integrationTest)
+}
+
+tasks.build.dependsOn(jacocoTestReport)
+
+jacocoTestCoverageVerification {
+
+    violationRules {
+        rule {
+            element = 'BUNDLE'
+
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.83
+            }
+        }
+    }
+
+    executionData(test, integrationTest)
+}
+
+tasks.jacocoTestReport.finalizedBy(jacocoTestCoverageVerification)

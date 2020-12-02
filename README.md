@@ -32,3 +32,8 @@ To execute, proceed to the base directory of this project and run the following:
 Swagger has been configured to produce an API blueprint for this application.
 Once the application is running, navigate to
 >               http://localhost:8080/api/swagger-ui/
+
+### Database Client
+An in-memory database called H2 is used for this application. It has a webclient 
+interface that may be accessed at
+>               http://localhost:8080/api/h2-console/
